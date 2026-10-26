@@ -147,3 +147,17 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# UnBoring
+apps/server/data/
+apps/server/.venv/
+*.mp4
+*.mov
+*.webm
+*.wav
+!fixtures/README.md
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
