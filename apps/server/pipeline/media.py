@@ -61,4 +61,4 @@ def make_proxy(src: Path, dst: Path) -> None:
 
 def extract_audio(src: Path, dst: Path) -> None:
     """Mono 16 kHz WAV, the format speech models expect."""
-    _run(["-i", str(src), "-vn", "-ac", "1", "-ar", "16000", str(dst)])
+    _run(["-i", str(src), "-vn", "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le", str(dst)])

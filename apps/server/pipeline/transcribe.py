@@ -5,12 +5,28 @@ Two backends, picked with TRANSCRIBE_BACKEND in .env:
 - "modal": WhisperX on a Modal GPU (faster and more accurate word timing). Needs `modal` set up.
 Both return raw words; pipeline/words.py turns them into the edit plan's words[].
 """
+import wave
 from pathlib import Path
 from typing import Callable
+
+import numpy as np
 
 import config
 
 _model = None
+
+
+def load_wav(path: Path) -> np.ndarray:
+    """Read our mono 16 kHz 16-bit WAV into float32 samples in [-1, 1].
+
+    We decode it ourselves instead of letting faster-whisper do it, because its decoder (PyAV)
+    breaks between versions (Windows setup hit "unexpected keyword argument 'metadata_errors'").
+    """
+    with wave.open(str(path), "rb") as f:
+        if f.getnchannels() != 1 or f.getsampwidth() != 2 or f.getframerate() != 16000:
+            raise ValueError("Expected mono 16 kHz 16-bit audio (pipeline/media.extract_audio makes this)")
+        frames = f.readframes(f.getnframes())
+    return np.frombuffer(frames, dtype="<i2").astype(np.float32) / 32768.0
 
 
 def _local(audio: Path, on_progress: Callable[[float], None]) -> list[dict]:
@@ -20,7 +36,7 @@ def _local(audio: Path, on_progress: Callable[[float], None]) -> list[dict]:
     if _model is None:
         _model = WhisperModel(config.WHISPER_MODEL, device="cpu", compute_type="int8")
     segments, info = _model.transcribe(
-        str(audio), language="en", word_timestamps=True, vad_filter=False,
+        load_wav(audio), language="en", word_timestamps=True, vad_filter=False,
         # Ask Whisper to keep disfluencies instead of cleaning them up.
         initial_prompt="Um, uh, so, I, I mean, like, hmm.")
     total = info.duration or 1.0
