@@ -5,6 +5,8 @@ Routes:
   GET  /api/projects/{id}            project status (+ source info)
   GET  /api/projects/{id}/events     live progress (Server-Sent Events)
   GET  /api/projects/{id}/words      transcript words with timestamps
+  GET  /api/projects/{id}/plan       the edit plan (words, keep ranges, ...)
+  GET  /api/projects/{id}/cuts       what the automatic cuts removed, and why
   POST /api/projects/{id}/retry      re-run from the first unfinished stage
   GET  /files/{id}/proxy.mp4         media files for the browser
 """
@@ -64,7 +66,12 @@ async def create_project(file: UploadFile):
 
 @app.get("/api/projects/{pid}")
 def get_project(pid: str):
-    return runner.read_status(_check_id(pid))
+    status = runner.read_status(_check_id(pid))
+    # Projects made before a new stage existed: finish the missing stages (finished ones are skipped).
+    if status["state"] == "ready" and not (runner.project_dir(pid) / "plan.json").exists():
+        status = runner.new_status(pid, status["name"], status["input"])
+        runner.start(pid)
+    return status
 
 
 @app.post("/api/projects/{pid}/retry")
@@ -83,6 +90,23 @@ def get_words(pid: str):
     if not path.exists():
         raise HTTPException(404, "Transcript isn't ready yet")
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _json_file(pid: str, name: str, what: str):
+    path = runner.project_dir(_check_id(pid)) / name
+    if not path.exists():
+        raise HTTPException(404, f"{what} isn't ready yet")
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+@app.get("/api/projects/{pid}/plan")
+def get_plan(pid: str):
+    return _json_file(pid, "plan.json", "The edit plan")
+
+
+@app.get("/api/projects/{pid}/cuts")
+def get_cuts(pid: str):
+    return _json_file(pid, "cuts.json", "The cut list")
 
 
 @app.get("/api/projects/{pid}/events")

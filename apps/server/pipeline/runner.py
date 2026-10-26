@@ -11,7 +11,7 @@ import traceback
 from pathlib import Path
 
 import config
-from pipeline import media, transcribe, words
+from pipeline import cuts, media, plan, transcribe, vad, words
 
 STAGES = [
     ("probe", "Reading video"),
@@ -19,6 +19,8 @@ STAGES = [
     ("proxy", "Making preview copy"),
     ("audio", "Extracting audio"),
     ("transcribe", "Transcribing words"),
+    ("vad", "Finding speech"),
+    ("cuts", "Cutting pauses, fillers and retakes"),
 ]
 
 _lock = threading.Lock()
@@ -99,6 +101,28 @@ def run(pid: str) -> None:
             raw = transcribe.transcribe(audio, lambda p: _set_stage(pid, "transcribe", progress=round(p, 3)))
             words_file.write_text(json.dumps(words.build_words(raw), indent=1), encoding="utf-8")
         _set_stage(pid, "transcribe", state="done", progress=1.0)
+
+        current = "vad"
+        speech_file = folder / "speech.json"
+        if not speech_file.exists():
+            _set_stage(pid, "vad", state="running")
+            speech_file.write_text(json.dumps(vad.speech_segments(audio)), encoding="utf-8")
+        _set_stage(pid, "vad", state="done", progress=1.0)
+
+        current = "cuts"
+        plan_file = folder / "plan.json"
+        if not plan_file.exists():
+            _set_stage(pid, "cuts", state="running")
+            the_words = json.loads(words_file.read_text(encoding="utf-8"))
+            speech = json.loads(speech_file.read_text(encoding="utf-8"))
+            source = read_status(pid)["source"]
+            result = cuts.detect(the_words, speech, source["duration"], cuts.PRESETS["explainer"])
+            (folder / "cuts.json").write_text(json.dumps(result["removed"], indent=1), encoding="utf-8")
+            tmp = folder / "tmp_plan.json"
+            tmp.write_text(json.dumps(plan.initial_plan(pid, source, the_words, result["keep"]), indent=1),
+                           encoding="utf-8")
+            tmp.replace(plan_file)
+        _set_stage(pid, "cuts", state="done", progress=1.0)
 
         status = read_status(pid)
         status["state"] = "ready"

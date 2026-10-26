@@ -23,6 +23,10 @@ browser (React + TypeScript, apps/web)          server (FastAPI, apps/server)
   editor: preview video + transcript ◀─────────  3 proxy    720p, keyframe every 15 frames
                                                  4 audio    mono 16 kHz
                                                  5 transcribe  words with timestamps (faster-whisper)
+                                                 6 vad      where speech is (Silero)
+                                                 7 cuts     pauses, fillers, retakes -> plan.json
+browser engine: plan.json -> timeMap (output<->source time) -> drawFrame -> canvas
+                A/B player: two hidden <video>s take turns so jump cuts never stall
 ```
 
 The full design is in [`docs/BUILD_SPEC.md`](docs/BUILD_SPEC.md).
@@ -42,7 +46,9 @@ Everything in this repo was built during the event (from Oct 26, 2026). Nothing 
 
 - **Day 1 (Oct 26):** project skeleton; upload API; ffmpeg ingest (constant 30 fps normalize, 720p seek-friendly preview proxy, 16 kHz audio); word-level transcription with stable word IDs and filler detection; live progress over Server-Sent Events with resumable stages; upload page, processing page, and an editor that follows playback word by word (requestVideoFrameCallback) and seeks on click; Windows one-click setup; tests.
 
+- **Day 2 (Oct 26–27):** Silero voice activity detection; automatic cut detection (long pauses confirmed silent by VAD, fillers only when they can be cut cleanly, back-to-back retakes keeping the last take, padding clamped so ranges never overlap); the first edit plan (`plan.json`); output↔source time mapping; `drawFrame` (room layer, captions, debug overlay); caption chunking; the A/B double-buffered preview player that plays the edited video instantly through every jump cut; UnBoring/Original toggle; transcript that shows what was cut and why.
+
 ## Tests
 
-- Server: `apps/server/tests` (pytest): word building, filler rules, full upload → words pipeline on a generated clip, video Range requests.
-- Web: `apps/web/src/**/*.test.ts` (Vitest): active-word lookup.
+- Server: `apps/server/tests` (pytest): word building, filler rules, cut detection (pauses, VAD, fillers, retakes, padding, stable IDs), full upload pipeline on a generated clip, video Range requests.
+- Web: `apps/web/src/**/*.test.ts` (Vitest): time mapping edge cases, caption chunking, active-word lookup.

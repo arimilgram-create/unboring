@@ -83,3 +83,15 @@ button {
   .transcript { border-left: 0; border-top: 1px solid var(--line); }
   .words { max-height: 60vh; }
 }
+
+/* Day 2: canvas preview + controls */
+.preview { width: 100%; aspect-ratio: 16 / 9; max-height: calc(100vh - 200px); background: #000; border-radius: 12px; cursor: pointer; object-fit: contain; }
+.controls { display: flex; align-items: center; gap: 12px; }
+.play { width: 44px; height: 44px; padding: 0; border-radius: 50%; font-size: 15px; }
+.scrub { flex: 1; accent-color: var(--accent); }
+.time { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 14px; min-width: 120px; }
+.seg { display: flex; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 3px; }
+.seg button { background: transparent; color: var(--muted); padding: 6px 12px; border-radius: 7px; font-size: 13px; }
+.seg button.on { background: var(--accent); color: var(--accent-ink); }
+.word.cut { color: var(--muted); text-decoration: line-through; opacity: 0.55; }
+.word.cut.retake { text-decoration-color: var(--accent); }

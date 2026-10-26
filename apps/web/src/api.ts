@@ -49,3 +49,8 @@ export function watchProject(id: string, onStatus: (s: ProjectStatus) => void): 
   };
   return () => source.close();
 }
+
+export const getPlan = (id: string) =>
+  fetch(`/api/projects/${id}/plan`).then((r) => json<import("./plan/types").EditPlan>(r));
+export const getCuts = (id: string) =>
+  fetch(`/api/projects/${id}/cuts`).then((r) => json<import("./plan/types").CutSummary>(r));

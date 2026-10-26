@@ -22,7 +22,7 @@ export default function App() {
         <a href="#/" className="logo">
           Un<span>Boring</span>
         </a>
-        <span className="tag">Day 1 build</span>
+        <span className="tag">Day 2 build</span>
       </header>
       {route.page === "project" ? <ProjectPage id={route.id} /> : <UploadPage />}
     </div>
