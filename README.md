@@ -12,7 +12,7 @@ Built for the **Meta Global AI Developer Hackathon** (Indie track, Oct 26 to Nov
 2. Double-click **`start.bat`**. Two windows open (keep them open) and your browser goes to http://localhost:5173.
 3. Drop in a video. You'll see each processing stage, then the video with its transcript, word by word.
 
-Optional: `test.bat` runs all tests. `check_meta.bat` checks your Meta API key (put it in `apps/server/.env` first).
+Optional: `update.bat` downloads the latest code from GitHub. `test.bat` runs all tests. `check_meta.bat` checks your Meta API key (put it in `apps/server/.env` first).
 
 ## How it works (so far)
 
