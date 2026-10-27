@@ -54,3 +54,4 @@ export const getPlan = (id: string) =>
   fetch(`/api/projects/${id}/plan`).then((r) => json<import("./plan/types").EditPlan>(r));
 export const getCuts = (id: string) =>
   fetch(`/api/projects/${id}/cuts`).then((r) => json<import("./plan/types").CutSummary>(r));
+export const planWithAI = (id: string) => fetch(`/api/projects/${id}/ai`, { method: "POST" }).then((r) => json(r));

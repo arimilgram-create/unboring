@@ -34,6 +34,7 @@ export default function ProjectPage({ id }: { id: string }) {
               {s.state === "running" && s.progress > 0 ? `${Math.round(s.progress * 100)}%` : ""}
               {s.state === "done" ? "✓" : ""}
               {s.state === "failed" ? "failed" : ""}
+              {s.state === "skipped" ? "needs key" : ""}
             </span>
           </li>
         ))}

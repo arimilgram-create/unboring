@@ -5,6 +5,7 @@ exists is skipped, so a crash can resume from the last finished stage (spec Sect
 The browser watches status.json through the /events stream.
 """
 import json
+import shutil
 import threading
 import time
 import traceback
@@ -21,6 +22,7 @@ STAGES = [
     ("transcribe", "Transcribing words"),
     ("vad", "Finding speech"),
     ("cuts", "Cutting pauses, fillers and retakes"),
+    ("ai", "Planning graphics with Muse Spark"),
 ]
 
 _lock = threading.Lock()
@@ -48,8 +50,10 @@ def _write_status(pid: str, status: dict) -> None:
 
 
 def new_status(pid: str, name: str, input_file: str) -> dict:
+    old = read_status(pid) if (project_dir(pid) / "status.json").exists() else None
+    created = (old or {}).get("createdAt") or time.time()
     status = {
-        "id": pid, "name": name, "input": input_file, "state": "processing", "error": None,
+        "id": pid, "name": name, "input": input_file, "state": "processing", "error": None, "createdAt": created,
         "stages": [{"key": k, "label": label, "state": "waiting", "progress": 0.0} for k, label in STAGES],
         "source": None,
     }
@@ -59,6 +63,9 @@ def new_status(pid: str, name: str, input_file: str) -> dict:
 
 def _set_stage(pid: str, key: str, **changes) -> None:
     status = read_status(pid)
+    if not any(s["key"] == key for s in status["stages"]):  # project made before this stage existed
+        label = dict(STAGES).get(key, key)
+        status["stages"].append({"key": key, "label": label, "state": "waiting", "progress": 0.0})
     for s in status["stages"]:
         if s["key"] == key:
             s.update(changes)
@@ -122,7 +129,14 @@ def run(pid: str) -> None:
             tmp.write_text(json.dumps(plan.initial_plan(pid, source, the_words, result["keep"]), indent=1),
                            encoding="utf-8")
             tmp.replace(plan_file)
+            shutil.copyfile(plan_file, folder / "plan.auto.json")  # the untouched automatic edit, for "Reset"
         _set_stage(pid, "cuts", state="done", progress=1.0)
+
+        current = "ai"
+        if not (folder / "plan.ai.done").exists():
+            run_ai(pid)
+        else:
+            _set_stage(pid, "ai", state="done", progress=1.0)
 
         status = read_status(pid)
         status["state"] = "ready"
@@ -136,6 +150,39 @@ def run(pid: str) -> None:
         status["state"] = "failed"
         status["error"] = str(exc) if isinstance(exc, media.MediaError) else f"{current} failed: {exc}"
         _write_status(pid, status)
+
+
+def run_ai(pid: str) -> None:
+    """AI planning. Never fails the project: without it you still get cuts + captions (spec Section 26)."""
+    from meta.meta_client import MetaError, api_key
+    from pipeline import ai_plan
+
+    folder = project_dir(pid)
+    if not api_key():
+        _set_stage(pid, "ai", state="skipped", progress=0.0,
+                   note="Add your Meta API key to apps/server/.env, then click 'Plan with AI'.")
+        return
+    _set_stage(pid, "ai", state="running", progress=0.0, note=None)
+    try:
+        plan_file = folder / "plan.json"
+        current_plan = json.loads(plan_file.read_text(encoding="utf-8"))
+        new = ai_plan.plan_with_ai(current_plan, folder,
+                                   on_progress=lambda p: _set_stage(pid, "ai", progress=round(p, 3)))
+        tmp = folder / "tmp_plan.json"
+        tmp.write_text(json.dumps(new, indent=1), encoding="utf-8")
+        tmp.replace(plan_file)
+        shutil.copyfile(plan_file, folder / "plan.auto.json")
+        (folder / "plan.ai.done").write_text(str(time.time()))
+        _set_stage(pid, "ai", state="done", progress=1.0,
+                   note=f"{len(new['graphics'])} graphics, {len(new['camera'])} camera moves")
+    except Exception as exc:  # show it, keep the project usable
+        traceback.print_exc()
+        msg = str(exc) if isinstance(exc, (MetaError, ValueError)) else f"AI planning failed: {exc}"
+        _set_stage(pid, "ai", state="failed", note=msg)
+
+
+def start_ai(pid: str) -> None:
+    threading.Thread(target=run_ai, args=(pid,), daemon=True).start()
 
 
 def start(pid: str) -> None:

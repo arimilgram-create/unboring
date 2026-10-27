@@ -13,8 +13,9 @@ export interface Word {
 export interface Stage {
   key: string;
   label: string;
-  state: "waiting" | "running" | "done" | "failed";
+  state: "waiting" | "running" | "done" | "failed" | "skipped";
   progress: number;
+  note?: string | null;
 }
 
 export interface ProjectStatus {

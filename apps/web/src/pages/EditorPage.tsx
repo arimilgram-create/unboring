@@ -1,10 +1,11 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
-import { getCuts, getPlan } from "../api";
+import { getCuts, getPlan, getProject, planWithAI } from "../api";
 import { activeWordIndex, formatTime } from "../editor/activeWord";
 import { timeMapFor } from "../engine/timeMap";
 import type { CutSummary, EditPlan } from "../plan/types";
 import { PreviewPlayer, type PlayerState } from "../player/PreviewPlayer";
-import type { ProjectStatus } from "../types";
+import type { ProjectStatus, Stage } from "../types";
+import type { GraphicItem } from "../engine/drawFrame";
 
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 
@@ -29,14 +30,41 @@ export default function EditorPage({ status }: { status: ProjectStatus }) {
       .catch((e) => setError(e.message));
   }, [status.id]);
 
-  // Create the player once the plan and canvas exist.
+  // Create the player once per project; later plan changes go through setPlan (no reload, keeps your place).
+  const planId = plan?.planId;
   useEffect(() => {
     if (!plan || !canvas.current) return;
     const p = new PreviewPlayer(canvas.current, plan, setState);
     player.current = p;
     p.ready().catch((e) => setError(e.message));
     return () => p.dispose();
-  }, [plan]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [planId]);
+
+  // AI planning status (Day 3). Polls while Muse Spark is working, then loads the new plan.
+  const [ai, setAi] = useState<Stage | undefined>(status.stages.find((s) => s.key === "ai"));
+  useEffect(() => {
+    if (ai?.state !== "running") return;
+    const timer = setInterval(async () => {
+      const s = (await getProject(status.id)).stages.find((x) => x.key === "ai");
+      setAi(s);
+      if (s?.state === "done") {
+        const [p, c] = await Promise.all([getPlan(status.id), getCuts(status.id)]);
+        setPlan(p);
+        setCuts(c);
+      }
+    }, 1500);
+    return () => clearInterval(timer);
+  }, [ai?.state, status.id]);
+
+  async function runAI() {
+    try {
+      await planWithAI(status.id);
+      setAi({ key: "ai", label: "Planning graphics with Muse Spark", state: "running", progress: 0 });
+    } catch (e) {
+      setAi({ key: "ai", label: "", state: "failed", progress: 0, note: (e as Error).message });
+    }
+  }
 
   useEffect(() => {
     if (plan && player.current) player.current.setPlan(plan, original);
@@ -114,6 +142,27 @@ export default function EditorPage({ status }: { status: ProjectStatus }) {
             <input type="checkbox" checked={debug} onChange={(e) => setDebug(e.target.checked)} /> debug
           </label>
         </div>
+        <div className="ai-bar">
+          <button className="ai-btn" onClick={runAI} disabled={ai?.state === "running"}>
+            {ai?.state === "running" ? `Planning… ${Math.round((ai.progress ?? 0) * 100)}%` : plan.graphics.length ? "✨ Re-plan with AI" : "✨ Plan with AI"}
+          </button>
+          <span className={`ai-note ${ai?.state === "failed" ? "error" : "muted"}`}>
+            {ai?.note ?? (ai?.state === "running" ? "Muse Spark is reading your transcript" : "Muse Spark plans graphics, zooms and chapters")}
+          </span>
+        </div>
+        {plan.graphics.length > 0 && (
+          <div className="gfx-list">
+            {(plan.graphics as GraphicItem[]).map((g) => {
+              const t = info.map.wordOutTime(g.atWord);
+              const label = String(g.props.term ?? g.props.title ?? g.props.text ?? g.props.label ?? g.props.icon ?? "");
+              return (
+                <button key={g.id} className="gfx-chip" disabled={!t} onClick={() => t && player.current?.seek(Math.max(0, t.start - 0.5))}>
+                  <b>{g.template}</b> {label} <span>{t ? formatTime(t.start) : "cut"}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
         <div className="meta">
           <strong>{status.name}</strong>
           <span>

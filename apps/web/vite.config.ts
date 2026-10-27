@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
+    fs: { allow: ["../.."] }, // lets the app import packages/shared (template catalog)
     proxy: {
       "/api": "http://localhost:8000",
       "/files": "http://localhost:8000",

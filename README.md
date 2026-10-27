@@ -35,7 +35,7 @@ The full design is in [`docs/BUILD_SPEC.md`](docs/BUILD_SPEC.md).
 
 | Model | Used for | Status |
 | --- | --- | --- |
-| Muse Spark 1.3 | Plans the edit (structure + details) | Day 3 |
+| Muse Spark 1.3 | Plans the edit (structure + details) | Built (Day 3) |
 | Muse Wonder | Verifier: checks every graphic is relevant and accurate | Day 7 |
 | SAM 3.1 | Cuts the speaker out so text can sit behind them | Day 2 |
 | Muse Image | Generates visuals | Day 7 |
@@ -48,7 +48,10 @@ Everything in this repo was built during the event (from Oct 26, 2026). Nothing 
 
 - **Day 2 (Oct 26–27):** Silero voice activity detection; automatic cut detection (long pauses confirmed silent by VAD, fillers only when they can be cut cleanly, back-to-back retakes keeping the last take, padding clamped so ranges never overlap); the first edit plan (`plan.json`); output↔source time mapping; `drawFrame` (room layer, captions, debug overlay); caption chunking; the A/B double-buffered preview player that plays the edited video instantly through every jump cut; UnBoring/Original toggle; transcript that shows what was cut and why.
 
+- **Day 3 (Oct 26–28):** Meta Model API client (structured JSON outputs, schema + rule validation, retries that explain the problems back to the model, per-video budget, cost log); Muse Spark structure pass (hook, chapters, big moments) and per-chunk detail pass (graphics, camera moves, caption highlights); merge (overlap priority, zoom spacing, stable IDs); shared template catalog; six animated templates (hookText, titleCard, keywordCard, iconPop, statCallout, titleBehind); time-based easing/spring helpers; camera moves (punchIn, punchOut, slowPush, reframe) with a resolution-aware zoom cap; full drawFrame layer order; "Plan with AI" in the editor; template gallery.
+
 ## Tests
 
 - Server: `apps/server/tests` (pytest): word building, filler rules, cut detection (pauses, VAD, fillers, retakes, padding, stable IDs), full upload pipeline on a generated clip, video Range requests.
-- Web: `apps/web/src/**/*.test.ts` (Vitest): time mapping edge cases, caption chunking, active-word lookup.
+- Server also: AI planning with a fake API client (retries, merge rules, stable IDs, budget stop, no-key message, catalog).
+- Web: `apps/web/src/**/*.test.ts` (Vitest): time mapping edge cases, caption chunking, easing/spring, camera moves and zoom cap, active-word lookup.

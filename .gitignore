@@ -161,3 +161,4 @@ apps/server/.venv/
 __pycache__/
 *.pyc
 .pytest_cache/
+apps/server/logs/

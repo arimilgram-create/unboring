@@ -95,3 +95,20 @@ button {
 .seg button.on { background: var(--accent); color: var(--accent-ink); }
 .word.cut { color: var(--muted); text-decoration: line-through; opacity: 0.55; }
 .word.cut.retake { text-decoration-color: var(--accent); }
+
+/* Day 3: AI planning */
+.ai-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ai-btn:disabled { opacity: 0.7; cursor: progress; }
+.ai-note { font-size: 13px; }
+.gfx-list { display: flex; gap: 8px; flex-wrap: wrap; }
+.gfx-chip { background: var(--panel); color: var(--text); border: 1px solid var(--line); font-weight: 500; font-size: 12px; padding: 6px 10px; border-radius: 8px; }
+.gfx-chip b { color: var(--accent); font-weight: 700; margin-right: 4px; }
+.gfx-chip span { color: var(--muted); margin-left: 4px; font-variant-numeric: tabular-nums; }
+.gfx-chip:disabled { opacity: 0.4; }
+.gallery { padding: 24px; display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 20px; }
+.gallery figure { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.gallery canvas { width: 100%; aspect-ratio: 16 / 9; display: block; }
+.gallery figcaption { padding: 10px 14px; display: flex; justify-content: space-between; color: var(--muted); font-size: 13px; }
+.gallery figcaption b { color: var(--text); }
+.navlink { margin-left: auto; color: var(--muted); text-decoration: none; font-size: 14px; } .navlink:hover { color: var(--text); }
+.stages li.skipped { color: var(--muted); }

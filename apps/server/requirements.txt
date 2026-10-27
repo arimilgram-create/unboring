@@ -6,3 +6,4 @@ faster-whisper>=1.1
 openai>=1.40
 pytest>=8
 httpx>=0.27
+jsonschema>=4.21

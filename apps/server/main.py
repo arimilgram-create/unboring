@@ -8,6 +8,7 @@ Routes:
   GET  /api/projects/{id}/plan       the edit plan (words, keep ranges, ...)
   GET  /api/projects/{id}/cuts       what the automatic cuts removed, and why
   POST /api/projects/{id}/retry      re-run from the first unfinished stage
+  POST /api/projects/{id}/ai         (re)plan graphics + camera with Muse Spark
   GET  /files/{id}/proxy.mp4         media files for the browser
 """
 import asyncio
@@ -82,6 +83,17 @@ def retry(pid: str):
     runner.new_status(pid, status["name"], status["input"])
     runner.start(pid)
     return {"id": pid}
+
+
+@app.post("/api/projects/{pid}/ai")
+def plan_ai(pid: str):
+    status = runner.read_status(_check_id(pid))
+    if status["state"] != "ready":
+        raise HTTPException(409, "Wait until processing finishes")
+    if any(s["key"] == "ai" and s["state"] == "running" for s in status["stages"]):
+        raise HTTPException(409, "Already planning")
+    runner.start_ai(pid)
+    return {"ok": True}
 
 
 @app.get("/api/projects/{pid}/words")
